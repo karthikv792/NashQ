@@ -47,7 +47,7 @@ class GridWorld:
                         state.append(np.ravel_multi_index((x, y), board.shape[:2]))
         return tuple(state)
 
-    def reset(self, goal_pos):
+    def reset(self, goal_pos = [(0, 1),(0, 1)]):
         self.agents = [1, 2]
         self.board = np.array([[(0, 0), (0, 0), (0, 0)], [(0, 0), (0, 0), (0, 0)], [(1, 0), (0, 0), (0, 1)]])
         self.state = self.get_state(self.board)
@@ -93,11 +93,11 @@ class GridWorld:
         # print("------------Agent position: ", agent_pos, "------------")
         # print("Goal: ", self.goal==agent_pos)
         reward = []
-        for i in agent_pos:
-            if i == self.goal:
+        for index,i in enumerate(agent_pos):
+            if i == self.goal[index]:
                 reward.append(100)
             else:
-                if tuple(self.board[i]) == tuple((1, 1)) and i != self.goal:
+                if tuple(self.board[i]) == tuple((1, 1)) and i != self.goal[index]:
                     reward.append(-1)
                 else:
                     reward.append(0)

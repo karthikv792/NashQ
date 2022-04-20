@@ -17,7 +17,7 @@ TODO:
 """
 
 
-def run_episode(env, agents, learning=True, max_steps=1000):
+def run_episode(env, episode, agents, learning=True, max_steps=1000):
     """Run single episode of the game"""
     state = env.state
     for step in range(max_steps):
@@ -25,8 +25,8 @@ def run_episode(env, agents, learning=True, max_steps=1000):
         state, rewards, done, observations = env.step(tuple(actions))
         agents[0].learn(state[0], rewards[0], rewards[1], actions[1], learning)
         agents[1].learn(state[1], rewards[1], rewards[0], actions[0], learning)
-        # if not learning:
-            # visualize(env, 'test', step, state)
+        # if not learning and episode !=0 and episode % 200 == 0:
+        #     visualize(env, 'test'+str(episode), step, state)
         if done:
             break
 
@@ -52,7 +52,7 @@ if __name__ == '__main__':
     nb_episodes = 1000
     max_steps = 1000
     actions = 4
-    env = GridWorld()
+    env = GridWorld(goal_pos=[(0,2),(0,0)])
     init_state = env.state
     agent1 = NashQLearner(0,init_state[0],actions)
     agent2 = NashQLearner(1,init_state[1],actions)
@@ -61,21 +61,39 @@ if __name__ == '__main__':
     #Train
     for episode in range(nb_episodes):
         # print("Episode: {}".format(episode))
-        env.reset()
-        run_episode(env, [agent1, agent2], learning=True, max_steps=max_steps)
+        env.reset(goal_pos=[(0,2),(0,0)])
+        run_episode(env, episode, [agent1, agent2], learning=True, max_steps=max_steps)
         if episode % 10 == 0:
-            env.reset()
+            env.reset(goal_pos=[(0,2),(0,0)])
             agent1.reset(env.state[0])
             agent2.reset(env.state[1])
-            step, rewards = run_episode(env, [agent1, agent2], learning=False, max_steps=max_steps)
+            step, rewards = run_episode(env, episode, [agent1, agent2], learning=False, max_steps=max_steps)
             reward_history[0].append(rewards[0])
             reward_history[1].append(rewards[1])
+            action_history.append(step)
             print("-------------------------------------------------------")
             print(f"{episode}th episode, step: {step}, a0:{rewards[0]}, a1:{rewards[1]}")
             print("-------------------------------------------------------")
+    plt.figure(figsize=(12, 8))
+    plt.subplot(3, 1, 1)
+    plt.plot(np.arange(len(action_history)), action_history, label="step")
+    plt.legend()
+    plt.subplot(3, 1, 2)
+    reward_history["0"] = np.array(reward_history[0])
+    reward_history["1"] = np.array(reward_history[1])
+    plt.plot(np.arange(len(reward_history["0"])),
+             reward_history["0"], label="reward_history0")
+    plt.legend()
+    plt.ylim(-50, 30)
+    plt.subplot(3, 1, 3)
+    plt.plot(np.arange(len(reward_history["1"])),
+             reward_history["1"], label="reward_history1")
+    plt.ylim(-50, 30)
+    plt.legend()
+    plt.savefig("result.png")
+    plt.show()
 
-
-class NashQLearning:
+"""class NashQLearning:
     def __init__(self):
         self.n_states = 10
         self.n_actions = 4
@@ -205,3 +223,5 @@ class NashQLearning:
 
 
 
+
+"""
