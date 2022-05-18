@@ -1,3 +1,4 @@
+from pettingzoo.mpe import simple_tag_v2
 # Implement the Nash Q Learning algorithm
 import numpy as np
 import matplotlib.pyplot as plt
@@ -17,23 +18,36 @@ TODO:
 """
 
 
-def run_episode(env, episode, agents, learning=True, max_steps=1000):
+def run_episode(env, episode, agents, agents_names, learning=True, max_steps=1000):
     """Run single episode of the game"""
     state = env.state
-    for step in range(max_steps):
-        actions = [agent.choose_action(state[agent.id], learning) for agent in agents]
-        state, rewards, done, observations = env.step(tuple(actions))
-        agents[0].learn(state[0], rewards[0], rewards[1], actions[1], learning)
-        agents[1].learn(state[1], rewards[1], rewards[0], actions[0], learning)
-        if not learning and episode !=0 and episode % 1000 == 0:
-            visualize(env, 'test'+str(episode), step, state)
+    prev_observations = [None, None]
+    prev_rewards = [None, None]
+    prev_actions = [None, None]
+    step = 0
+    for agent in env.agent_iter():
+        observation, reward, done, infos = env.last()
+        curr_agent = agents_names.index(agent)
+        prev_observations[curr_agent] = observation
+        prev_rewards[curr_agent] = reward
+        action = agents[curr_agent].choose_action(tuple(observation), learning)
+        prev_actions[curr_agent] = action
         if done:
-            break
+            action = None
+        env.step(action)
+        # print("Curr agent",curr_agent,"\n")
+        if curr_agent == 1:
+            agents[0].learn(tuple(prev_observations[0]), prev_rewards[0], prev_rewards[1], prev_actions[1], learning)
+            agents[1].learn(tuple(prev_observations[1]), prev_rewards[1], prev_rewards[0], prev_actions[0], learning)
+        step+=1
+
+
+
 
     average_rewards = []
     average_rewards.append(np.mean(agents[0].reward_list))
     average_rewards.append(np.mean(agents[1].reward_list))
-    return step, average_rewards
+    return step//2, average_rewards
 
 def visualize(env,episode, iteration, state):
     if (os.path.isdir(str(episode)) == False):
@@ -49,31 +63,35 @@ def visualize(env,episode, iteration, state):
     plt.close()
 
 if __name__ == '__main__':
-    nb_episodes = 5000
+    nb_episodes = 500000
     max_steps = 1000
-    actions = 4
-    env = GridWorld(goal_pos=[(0,2),(0,0)])
-    init_state = env.state
-    agent1 = NashQLearner(0,init_state[0],actions)
-    agent2 = NashQLearner(1,init_state[1],actions)
+
+    env = simple_tag_v2.env(num_good = 1, num_adversaries = 1, num_obstacles = 2, max_cycles=100)
+    env.reset()
+    agents_names = env.agents
+
+    actions = 5
+    init_state = tuple(env.state())
+    agent1 = NashQLearner(0,init_state,actions) #Adversary
+    agent2 = NashQLearner(1,init_state,actions) #Good
     action_history = []
     reward_history = {0:[],1:[]}
     #Train
-    for episode in range(nb_episodes+1):
-        print("Episode: {}".format(episode))
-        env.reset(goal_pos=[(0,2),(0,0)])
-        run_episode(env, episode, [agent1, agent2], learning=True, max_steps=max_steps)
+    for episode in range(nb_episodes):
+        env.reset()
+        print("Episode: ",episode,"\n")
+        step, rewards = run_episode(env, episode, [agent1, agent2], agents_names, True, max_steps)
+        reward_history[0].append(rewards[0])
+        reward_history[1].append(rewards[1])
+        action_history.append(step)
         if episode % 500 == 0:
-            env.reset(goal_pos=[(0,2),(0,0)])
-            agent1.reset(env.state[0])
-            agent2.reset(env.state[1])
-            step, rewards = run_episode(env, episode, [agent1, agent2], learning=False, max_steps=max_steps)
-            reward_history[0].append(rewards[0])
-            reward_history[1].append(rewards[1])
-            action_history.append(step)
-            print("-------------------------------------------------------")
-            print(f"{episode}th episode, step: {step}, a0:{rewards[0]}, a1:{rewards[1]}")
-            print("-------------------------------------------------------")
+            f = open("nash_q_learning_rewards.txt", "w")
+            f.write(f"Episode: {episode}\n")
+            f.write(f"Action History: {action_history}\n")
+            f.write(f"Adversary Reward History: {reward_history[0]}\n")
+            f.write(f"Good Reward History: {reward_history[1]}\n")
+            f.close()
+
 
     plt.figure(figsize=(12, 8))
     plt.subplot(3, 1, 1)
@@ -82,16 +100,16 @@ if __name__ == '__main__':
     plt.subplot(3, 1, 2)
     reward_history["0"] = np.array(reward_history[0])
     reward_history["1"] = np.array(reward_history[1])
-    print(action_history)
-    print(reward_history["0"])
-    print(reward_history["1"])
+    # print(action_history)
+    # print(reward_history["0"])
+    # print(reward_history["1"])
     plt.plot(np.arange(len(reward_history["0"])),
              reward_history["0"], label="reward_history0")
     plt.plot(np.arange(len(reward_history["1"])),
              reward_history["1"], label="reward_history1")
-    plt.xlabel('Episode * 500')
+    plt.xlabel('Episode')
     plt.legend()
-    plt.savefig("result.png")
+    plt.savefig("result_simple_tag.png")
     plt.show()
 
 """class NashQLearning:

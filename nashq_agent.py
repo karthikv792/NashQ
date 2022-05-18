@@ -31,6 +31,7 @@ class NashQLearner:
         pi, _ = self.compute_pi(state)
         return pi
     def choose_action(self, state, training=True):
+        self.check_new_state(state)
         pi_nash = self.compute_pi(state)
 
         action = None
@@ -77,11 +78,12 @@ class NashQLearner:
             pi_nash_list = list(equilibria)
         except:
             pi_nash_list = []
-        for eq in pi_nash_list:
+        for ind, eq in enumerate(pi_nash_list):
             if eq[0].shape == (self.actions,) and eq[1].shape == (self.actions,):
                 if any(np.isnan(eq[0]))==False and any(np.isnan(eq[1]))==False:
-                    pi_nash = (eq[0], eq[1])
-                    break
+                    if ind !=0:
+                        pi_nash = (eq[0], eq[1])
+                        break
         if pi_nash is None:
             pi_nash = (np.ones(self.actions)/self.actions, np.ones(self.actions)/self.actions)
         return pi_nash

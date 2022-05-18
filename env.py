@@ -63,6 +63,7 @@ class GridWorld:
         # Search for agent in the board
         # Get the position of the agent in board
         agent_pos = self.get_agent_index_unravel(self.state[agent - 1], self.board)
+        opponent_pos = self.get_agent_index_unravel(self.state[agent%2], self.board)
 
         # print("------------Agent position: ", agent_pos, "------------")
         # print("------------Action: ", self.actions[action], "------------")
@@ -97,7 +98,7 @@ class GridWorld:
             if i == self.goal[index]:
                 reward.append(100)
             else:
-                if tuple(self.board[i]) == tuple((1, 1)) and i != self.goal[index]:
+                if agent_pos[0]==agent_pos[1] and i!=self.goal[(index+1)%2]:
                     reward.append(-1)
                 else:
                     reward.append(0)
@@ -107,12 +108,17 @@ class GridWorld:
     def step(self, action):
         # Based on the action, update the state of the environment
         new_agent_pos = []  # Unraveled index
-
+        prev_agent_pos = [self.get_agent_index_unravel(i, self.board) for i in self.state]
         for index, i in enumerate(self.agents):
             new_agent_pos.append(self.get_new_pos(action[index], i))
             self.observations[self.agents[index]]['actions'].append(action[index])
-
+        # If both the agents are in the same position, then the state is the same
         reward = self.get_reward(new_agent_pos)
+        # print("1",new_agent_pos, new_agent_pos[0] == new_agent_pos[1])
+        if sum(reward) == -2:
+            new_agent_pos[0] = self.get_agent_index_unravel(self.state[0], self.board)
+            new_agent_pos[1] = self.get_agent_index_unravel(self.state[1], self.board)
+        # print("2",new_agent_pos, new_agent_pos[0] == new_agent_pos[1])
         for index, i in enumerate(self.agents):
             self.observations[i]['rewards'].append(reward[index])
         self.change_board(new_agent_pos)
